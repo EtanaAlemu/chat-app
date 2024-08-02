@@ -58,14 +58,20 @@ router.post('/message', async (req, res) => {
   }
 });
 
-// Get all groups
+// Get all chat room
 router.get("/", protect, async (req, res) => {
   try {
-    const groups = await Group.find();
-    res.json(groups);
+
+    // Fetch chat rooms and populate members
+    const chatRooms = await ChatRoom.find({ "members.userId": req.user._id })
+      .populate("members.userId", "username") // Populate user data, change "username" to the fields you need
+      .exec();
+
+    res.json(chatRooms);
+
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error fetching groups" });
+    res.status(500).json({ message: "Error fetching chat rooms" });
   }
 });
 

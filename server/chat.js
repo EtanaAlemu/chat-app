@@ -17,13 +17,13 @@ module.exports = (io) => {
     }
 
     // Listen for incoming messages for P2P or group chat
-    socket.on("newMessage", async (message) => {
+    socket.on("newMessage", async (payload) => {
       try {
         // Ensure data is an object
         const data =
-          typeof message === "string" ? JSON.parse(message) : message;
+          typeof payload === "string" ? JSON.parse(payload) : payload;
 
-        console.log("New message received: ", data);
+        console.log("New data received: ", data);
 
         // Check if the room is P2P or Group
         const chatRoom = await ChatRoom.findById(data.room);
@@ -62,6 +62,24 @@ module.exports = (io) => {
         socket.emit("newMessage", newMessage);
       } catch (err) {
         console.error(err);
+      }
+    });
+
+    socket.on("requestPreviousMessages", async (payload) => {
+      try {
+        // Ensure data is an object
+        const data =
+          typeof payload === "string" ? JSON.parse(payload) : payload;
+        
+        console.log("New data received: ", data);
+        
+        const messages = await Message.find({ room: data.room })
+          .sort({ timestamp: 1 })
+          .exec();
+        socket.emit("previousMessages", { room: data.room, messages });
+      } catch (error) {
+        console.error("Error fetching previous messages:", error);
+        socket.emit("previousMessages", { room: roomId, messages: [] }); // Send empty if error
       }
     });
 

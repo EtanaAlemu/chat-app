@@ -5,6 +5,7 @@ const Chat = ({ token }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [roomId, setRoomId] = useState("");
+  const [chatRooms, setChatRooms] = useState([]); // Store chat rooms
   const socket = useRef(null); // Use useRef to keep the socket instance
 
   useEffect(() => {
@@ -12,6 +13,23 @@ const Chat = ({ token }) => {
     socket.current = io("http://localhost:5000/", {
       query: { token }, // Send the token with the connection
     });
+
+    // Fetch chat rooms for the logged-in user
+    const fetchChatRooms = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/chat", {
+          headers: {
+            Authorization: `Bearer ${token}`, // Send token for authentication
+          },
+        });
+        const data = await response.json();
+        setChatRooms(data); // Set the chat rooms state
+      } catch (error) {
+        console.error("Error fetching chat rooms:", error);
+      }
+    };
+
+    fetchChatRooms();
 
     socket.current.on("connect", () => {
       console.log("Connected to the server");
@@ -26,7 +44,7 @@ const Chat = ({ token }) => {
       if (room === roomId) {
         console.log("Received previous messages", messages);
 
-        setMessages((prevMessages) => [...prevMessages, ...messages]);
+        setMessages(messages); // Set messages directly instead of appending
       }
     });
 
@@ -35,8 +53,18 @@ const Chat = ({ token }) => {
       socket.current.off("previousMessages");
       socket.current.disconnect();
     };
-  }, [token, roomId]); // Add token as a dependency
+  }, [token]); // Add token as a dependency
 
+  const handleRoomChange = (e) => {
+    const selectedRoomId = e.target.value;
+    setRoomId(selectedRoomId);
+    setMessages([]); // Clear messages when changing room
+
+    if (selectedRoomId) {
+      // Request previous messages for the selected room
+      socket.current.emit("requestPreviousMessages", { room: selectedRoomId });
+    }
+  };
   const sendMessage = (e) => {
     e.preventDefault();
     if (input && roomId) {
@@ -53,6 +81,21 @@ const Chat = ({ token }) => {
     <div>
       <h1>Chat Room</h1>
       <div>
+        <select value={roomId} onChange={handleRoomChange}>
+          <option value="">Select a chat room</option>
+          {chatRooms.map((room) => (
+            <option key={room._id} value={room._id}>
+              {room.type === "Group"
+                ? room.name
+                : "P2P with " +
+                  room.members
+                    .map((member) => member.userId.username)
+                    .join(", ")}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
         {messages.map((msg, index) => (
           <div key={index} style={{ textAlign: msg.self ? "right" : "left" }}>
             <strong>{msg.username}:</strong> {msg.message}
@@ -65,13 +108,6 @@ const Chat = ({ token }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
-        />
-
-        <input
-          type="text"
-          value={roomId}
-          onChange={(e) => setRoomId(e.target.value)}
-          placeholder="Type a Room ID..."
         />
         <button type="submit">Send</button>
       </form>
