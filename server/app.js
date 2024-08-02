@@ -6,18 +6,32 @@ const Message = require("./models/Message");
 const dotenv = require("dotenv");
 const chat = require("./chat");
 const authRoutes = require("./routes/auth");
+const chatRoomRoutes = require("./routes/chat"); 
 const { protect } = require("./middleware/auth");
 const jwt = require("jsonwebtoken"); // Add this line
 const User = require("./models/User"); // Add this line
+const cors = require("cors"); // Import the cors package
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000", // Adjust this to your frontend URL
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Authorization"],
+    credentials: true,
+  },
+});
+
 
 // Connect to Database
 connectDB();
+
+
+// Use CORS middleware
+app.use(cors());
 
 // Middleware
 app.use(express.json());
@@ -25,6 +39,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use("/api/chat", chatRoomRoutes);
 
 // Chat logic
 io.use(async (socket, next) => {

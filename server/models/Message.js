@@ -1,21 +1,18 @@
-const mongoose = require("mongoose");
+// models/Message.js
 
-const MessageSchema = new mongoose.Schema({
-  username: {
+const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
+
+const MessageSchema = new Schema({
+  username: { type: String, required: true },
+  message: { type: String, required: true },
+  room: { type: Schema.Types.ObjectId, ref: "ChatRoom", required: true },
+  sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  timestamp: { type: Date, default: Date.now },
+  status: {
     type: String,
-    required: true,
-  },
-  message: {
-    type: String,
-    required: true,
-  },
-  room: {
-    type: String,
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
+    enum: ["sent", "delivered", "read"],
+    default: "sent",
   },
 });
 
